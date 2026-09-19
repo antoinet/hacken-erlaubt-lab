@@ -1,0 +1,10 @@
+node_modules/
+.netlify/
+.DS_Store
+*.log
+
+# Configuration files are normally kept out of git. In this repository the
+# leaked file IS the exercise, so these two are committed on purpose.
+.env
+!site/.env
+!site/_leak/env.txt

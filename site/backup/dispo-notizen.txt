@@ -1,0 +1,9 @@
+Notizen Umstellung Dispo-Portal (mk, 04/2019)
+---------------------------------------------
+- Altes Portal (Zugang ueber die Startseite verlinkt) wurde entfernt,
+  neues liegt jetzt im internen Verzeichnis. Link bewusst NICHT mehr
+  auf der Website, damit es niemand von aussen findet.
+- Zugangsdaten stehen in der Konfigurationsdatei im Webroot, wie
+  besprochen. Bitte nicht per Mail verschicken.
+- Passwortwechsel fuer alle Mitarbeitenden: verschoben auf Q3.
+  (Sandra will ihr altes Passwort behalten.)

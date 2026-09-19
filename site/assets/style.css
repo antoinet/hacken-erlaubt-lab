@@ -1,0 +1,118 @@
+/* VeloRapid Zürich GmbH — training site stylesheet.
+   Deliberately plain: this is meant to look like a small business site a
+   freelancer built years ago and nobody touched since. */
+
+:root {
+  --ink: #1f2428;
+  --muted: #5d6770;
+  --line: #dfe3e6;
+  --bg: #ffffff;
+  --sand: #f6f4f1;
+  --brand: #d94f2b;
+  --brand-dark: #a93a1d;
+  --ok: #1f7a4d;
+  --warn: #b7791f;
+  --font: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  color: var(--ink);
+  background: var(--bg);
+  line-height: 1.6;
+}
+
+a { color: var(--brand-dark); }
+
+.wrap { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
+
+/* --- Übungs-Banner --- */
+.lab-banner {
+  background: #2b2f33;
+  color: #f4d35e;
+  font-size: 13px;
+  padding: 8px 0;
+  text-align: center;
+}
+.lab-banner strong { color: #fff; }
+
+/* --- Kopf --- */
+header.site { border-bottom: 1px solid var(--line); background: #fff; }
+.headrow { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; flex-wrap: wrap; }
+.logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); }
+.logo img { width: 38px; height: 38px; }
+.logo b { font-size: 20px; letter-spacing: -0.02em; }
+.logo span span { display: block; font-size: 11px; color: #6b7280; letter-spacing: 0.08em; text-transform: uppercase; }
+nav.site a { color: var(--ink); text-decoration: none; margin-left: 18px; font-size: 15px; }
+nav.site a:hover, nav.site a[aria-current="page"] { color: var(--brand); }
+
+/* --- Inhalt --- */
+.hero { background: var(--sand); padding: 54px 0; border-bottom: 1px solid var(--line); }
+.hero h1 { font-size: 36px; margin: 0 0 12px; letter-spacing: -0.02em; }
+.hero p { font-size: 18px; color: #4b5563; max-width: 58ch; margin: 0 0 22px; }
+
+main { padding: 40px 0 56px; }
+h2 { font-size: 24px; margin: 34px 0 12px; }
+h3 { font-size: 17px; margin: 22px 0 6px; }
+
+.btn {
+  display: inline-block; background: var(--brand); color: #fff; text-decoration: none;
+  padding: 11px 20px; border-radius: 3px; font-weight: 600; border: 0; cursor: pointer; font-size: 15px;
+}
+.btn:hover { background: var(--brand-dark); }
+.btn.ghost { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+
+.grid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.card { border: 1px solid var(--line); border-radius: 4px; padding: 18px; background: #fff; }
+.card h3 { margin-top: 0; }
+.card p { color: #4b5563; font-size: 15px; margin-bottom: 0; }
+
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { background: var(--sand); font-weight: 600; white-space: nowrap; }
+td.num, th.num { text-align: right; }
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 4px; }
+
+code, kbd, .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 13px; }
+
+footer.site { border-top: 1px solid var(--line); background: var(--sand); padding: 26px 0; font-size: 13px; color: #6b7280; }
+footer.site p { margin: 4px 0; }
+.disclaimer { color: #8a5a00; }
+
+/* --- Portal --- */
+body.portal { background: #eef1f4; }
+.login-box { max-width: 380px; margin: 60px auto; background: #fff; border: 1px solid var(--line); border-radius: 5px; padding: 26px; }
+.login-box h1 { font-size: 20px; margin: 0 0 4px; }
+.login-box .sub { color: #6b7280; font-size: 13px; margin: 0 0 20px; }
+label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 4px; }
+input[type=text], input[type=password] {
+  width: 100%; padding: 9px 10px; border: 1px solid #c8cdd2; border-radius: 3px; font-size: 15px; font-family: var(--font);
+}
+.msg { margin-top: 14px; padding: 9px 11px; border-radius: 3px; font-size: 14px; display: none; }
+.msg.error { background: #fdecea; color: #922; border: 1px solid #f5c2bd; display: block; }
+.msg.info { background: #eaf4ec; color: var(--ok); border: 1px solid #bcdcc5; display: block; }
+.hint { font-size: 12px; color: #8b9199; margin-top: 18px; border-top: 1px dashed var(--line); padding-top: 12px; }
+
+.portal-bar { background: #2b3138; color: #fff; padding: 10px 0; }
+.portal-bar .wrap { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.portal-bar b { letter-spacing: -0.01em; }
+.portal-bar .who { font-size: 13px; color: #b9c0c7; }
+.portal-bar button { background: transparent; color: #fff; border: 1px solid #58606a; border-radius: 3px; padding: 4px 10px; cursor: pointer; font-size: 13px; }
+
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin: 20px 0 0; flex-wrap: wrap; }
+.tabs button {
+  background: #e6eaee; border: 1px solid var(--line); border-bottom: 0; color: var(--ink);
+  padding: 9px 16px; cursor: pointer; font-size: 14px; border-radius: 4px 4px 0 0; font-family: var(--font);
+}
+.tabs button.active { background: #fff; font-weight: 600; }
+.panel { background: #fff; border: 1px solid var(--line); border-top: 0; padding: 20px; }
+.panel[hidden] { display: none; }
+
+.flag { background: #12331f; color: #7ee2a8; padding: 12px 14px; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 14px; word-break: break-all; }
+.notice { background: #fff8e6; border: 1px solid #f0d9a0; border-radius: 4px; padding: 12px 14px; font-size: 14px; }
+.stat { display: inline-block; margin: 0 26px 10px 0; }
+.stat b { display: block; font-size: 22px; }
+.stat span { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.06em; }

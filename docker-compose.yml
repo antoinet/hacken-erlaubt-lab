@@ -1,0 +1,12 @@
+# Local / lab deployment of the training app.
+#
+# The host port is deliberately non-standard: when the nmap module is added,
+# participants should have to discover the web service on an unusual port
+# instead of assuming 80/443. Add further decoy services here then.
+services:
+  velorapid:
+    build: .
+    container_name: velorapid-lab
+    ports:
+      - "8443:8080"
+    restart: unless-stopped

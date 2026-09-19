@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Dispo-Portal</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+</head>
+<body class="portal">
+<div class="lab-banner">&#9888;&#65039; <strong>&Uuml;bungsumgebung</strong> &mdash; fiktives Unternehmen, alle Daten erfunden.</div>
+
+<div class="portal-bar">
+  <div class="wrap">
+    <b>VeloRapid Dispo-Portal</b>
+    <span class="who">Angemeldet als <span id="who">&hellip;</span> <span id="rolle"></span>
+      <button id="logout" type="button">Abmelden</button></span>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="tabs" id="tabs">
+    <button data-panel="uebersicht" class="active">&Uuml;bersicht</button>
+    <button data-panel="auftraege">Auftr&auml;ge</button>
+    <button data-panel="kunden">Kunden</button>
+    <button data-panel="datenbank">Datenbank</button>
+    <button data-panel="admin" id="tabAdmin" hidden>Administration</button>
+  </div>
+
+  <section class="panel" id="panel-uebersicht">
+    <h2 style="margin-top:0">Tagesübersicht</h2>
+    <div id="stats"></div>
+    <p class="notice" id="flag2"></p>
+  </section>
+
+  <section class="panel" id="panel-auftraege" hidden>
+    <h2 style="margin-top:0">Auftr&auml;ge</h2>
+    <div id="auftraege">Wird geladen &hellip;</div>
+  </section>
+
+  <section class="panel" id="panel-kunden" hidden>
+    <h2 style="margin-top:0">Kunden</h2>
+    <div id="kunden">Wird geladen &hellip;</div>
+  </section>
+
+  <section class="panel" id="panel-datenbank" hidden>
+    <h2 style="margin-top:0">Datenbank <span class="mono" style="font-weight:normal">velorapid_dispo</span></h2>
+    <p style="font-size:14px;color:#5d6770">Service-Account <span class="mono">dispo_ro</span> &ndash; Lesezugriff auf alle Tabellen.</p>
+    <div id="tabellen"></div>
+    <div id="tabellendaten" style="margin-top:18px"></div>
+  </section>
+
+  <section class="panel" id="panel-admin" hidden>
+    <h2 style="margin-top:0">Administration</h2>
+    <div id="adminInhalt">Wird geladen &hellip;</div>
+  </section>
+</div>
+
+<script src="../assets/portal.js"></script>
+<script>
+var session = requireSession();
+
+if (session) {
+  document.getElementById('who').textContent = session.name + ' (' + session.benutzername + ')';
+  document.getElementById('rolle').textContent = '– Rolle: ' + session.rolle;
+  if (session.rolle === 'admin') document.getElementById('tabAdmin').hidden = false;
+  if (session.flag) {
+    document.getElementById('flag2').innerHTML =
+      'Zugang zum internen Portal erreicht. Flag 2 von 3: <span class="mono"><b>' +
+      esc(session.flag) + '</b></span>';
+  }
+}
+
+document.getElementById('logout').addEventListener('click', function () {
+  clearSession();
+  window.location.href = 'index.html';
+});
+
+/* --- Tabs ------------------------------------------------------------- */
+var loaded = {};
+document.getElementById('tabs').addEventListener('click', function (ev) {
+  var btn = ev.target.closest('button[data-panel]');
+  if (!btn) return;
+  var name = btn.dataset.panel;
+  Array.prototype.forEach.call(document.querySelectorAll('#tabs button'), function (b) {
+    b.classList.toggle('active', b === btn);
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('.panel'), function (p) {
+    p.hidden = p.id !== 'panel-' + name;
+  });
+  if (!loaded[name]) { loaded[name] = true; load(name); }
+});
+
+async function load(name) {
+  if (name === 'auftraege' || name === 'kunden') {
+    var target = document.getElementById(name);
+    try {
+      var data = await api('/api/tabelle/' + name);
+      target.innerHTML = renderTable(data.spalten, data.zeilen);
+    } catch (err) {
+      target.innerHTML = '<p class="msg error" style="display:block">' + esc(err.message) + '</p>';
+    }
+  }
+  if (name === 'datenbank') loadDatenbank();
+  if (name === 'admin') loadAdmin();
+}
+
+/* --- Übersicht -------------------------------------------------------- */
+(async function () {
+  try {
+    var t = await api('/api/tabellen');
+    document.getElementById('stats').innerHTML = t.tabellen.map(function (tab) {
+      return '<span class="stat"><b>' + tab.zeilen + '</b><span>' + esc(tab.name) + '</span></span>';
+    }).join('');
+  } catch (err) {
+    document.getElementById('stats').textContent = err.message;
+  }
+})();
+
+/* --- Datenbank -------------------------------------------------------- */
+async function loadDatenbank() {
+  var list = document.getElementById('tabellen');
+  try {
+    var t = await api('/api/tabellen');
+    list.innerHTML = '<div class="tablewrap"><table><thead><tr><th>Tabelle</th><th class="num">Zeilen</th>' +
+      '<th class="num">Spalten</th><th></th></tr></thead><tbody>' +
+      t.tabellen.map(function (tab) {
+        return '<tr><td class="mono">' + esc(tab.name) + '</td><td class="num">' + tab.zeilen +
+          '</td><td class="num">' + tab.spalten + '</td>' +
+          '<td><button class="btn ghost" style="padding:3px 10px;font-size:13px" data-tab="' +
+          esc(tab.name) + '">durchsuchen</button></td></tr>';
+      }).join('') + '</tbody></table></div>';
+  } catch (err) {
+    list.innerHTML = '<p class="msg error" style="display:block">' + esc(err.message) + '</p>';
+  }
+}
+
+document.getElementById('tabellen').addEventListener('click', async function (ev) {
+  var btn = ev.target.closest('button[data-tab]');
+  if (!btn) return;
+  var name = btn.dataset.tab;
+  var out = document.getElementById('tabellendaten');
+  out.innerHTML = 'Wird geladen &hellip;';
+  try {
+    var data = await api('/api/tabelle/' + name);
+    var extra = '';
+    if (name === 'mitarbeiter') {
+      extra = '<p class="notice" style="margin-bottom:12px">Passw&ouml;rter werden als MD5-Hash ' +
+        'gespeichert (Legacy-Schema von 2014). ' +
+        '<a href="/api/export/hashes" id="dump">Hashes exportieren</a></p>';
+    }
+    out.innerHTML = '<h3 style="margin-top:0">SELECT * FROM <span class="mono">' + esc(name) +
+      '</span></h3>' + extra + renderTable(data.spalten, data.zeilen);
+    var dump = document.getElementById('dump');
+    if (dump) dump.addEventListener('click', exportHashes);
+  } catch (err) {
+    out.innerHTML = '<p class="msg error" style="display:block">' + esc(err.message) + '</p>';
+  }
+});
+
+/* Downloads the hash list as a file, ready for hashcat. */
+async function exportHashes(ev) {
+  ev.preventDefault();
+  var session = loadSession();
+  var res = await fetch('/api/export/hashes', { headers: { authorization: 'Bearer ' + session.token } });
+  var text = await res.text();
+  var url = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'velorapid_hashes.txt';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/* --- Administration (nur Rolle admin) --------------------------------- */
+async function loadAdmin() {
+  var target = document.getElementById('adminInhalt');
+  try {
+    var data = await api('/api/admin');
+    target.innerHTML =
+      '<p>Vollzugriff als <b>' + esc(data.angemeldet_als) + '</b>. Ein Angreifer sieht an dieser ' +
+      'Stelle s&auml;mtliche Gesch&auml;ftsdaten &ndash; und k&ouml;nnte sie ver&auml;ndern oder l&ouml;schen.</p>' +
+      '<div style="margin:16px 0">' +
+        '<span class="stat"><b>' + data.kennzahlen.kundendatensaetze + '</b><span>Kundendaten</span></span>' +
+        '<span class="stat"><b>' + data.kennzahlen.auftraege_gesamt + '</b><span>Auftr&auml;ge</span></span>' +
+        '<span class="stat"><b>' + data.kennzahlen.mitarbeiterkonten + '</b><span>Konten</span></span>' +
+        '<span class="stat"><b>CHF ' + data.kennzahlen.umsatz_chf.toLocaleString('de-CH') + '</b><span>Jahresumsatz</span></span>' +
+      '</div>' +
+      '<p class="flag">Flag 3 von 3: ' + esc(data.flag) + '</p>' +
+      '<h3>Was hier schiefgelaufen ist</h3>' +
+      '<ol style="font-size:15px;line-height:1.7">' +
+        '<li><b>Konfigurationsdatei im Webroot.</b> Die Datei <span class="mono">.env</span> geh&ouml;rt ' +
+          'niemals in ein Verzeichnis, das der Webserver ausliefert &ndash; und Zugangsdaten geh&ouml;ren ' +
+          'nicht ins Repository.</li>' +
+        '<li><b>&laquo;Versteckte&raquo; URL als Schutz.</b> Ein nicht verlinktes Verzeichnis ist nicht ' +
+          'geheim: Wortlisten finden <span class="mono">/intranet/</span> in Sekunden. Sicherheit ' +
+          'braucht Authentisierung, nicht Unauffälligkeit.</li>' +
+        '<li><b>Geteilter Service-Account.</b> Ein Konto, das alle kennen und das nie rotiert wird, ' +
+          'macht jeden Zugriff unnachvollziehbar.</li>' +
+        '<li><b>MD5 ohne Salt.</b> G&auml;ngige Passw&ouml;rter fallen damit in Sekunden. Heute: ' +
+          'bcrypt, scrypt oder Argon2id &ndash; mit Salt, absichtlich langsam.</li>' +
+        '<li><b>Schwache Passw&ouml;rter, nie gewechselt.</b> <span class="mono">trustno1</span> steht in ' +
+          'jeder Wortliste. Dazu geh&ouml;ren MFA, Rate-Limiting und Monitoring fehlgeschlagener Logins.</li>' +
+      '</ol>';
+  } catch (err) {
+    target.innerHTML = '<p class="msg error" style="display:block">' + esc(err.message) +
+      '</p><p>Diese Ansicht ist nur f&uuml;r die Rolle <span class="mono">admin</span> zug&auml;nglich.</p>';
+  }
+}
+</script>
+</body>
+</html>

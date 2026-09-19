@@ -1,0 +1,45 @@
+# Netlify deployment for the "Hacken erlaubt" training application.
+#
+# Reminder: Netlify only ever serves on 443. The port-scanning module of the
+# workshop therefore needs a different target (see docs/facilitator-guide.md).
+
+[build]
+  publish = "site"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "zisi"
+  included_files = ["lib/**"]
+
+# The portal's backend.
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true
+
+# Stage 1 of the exercise: the leaked configuration file must be served as
+# plain text. Dotfiles are not guaranteed to survive every deploy path, so the
+# canonical copy lives at /_leak/env.txt and /.env is rewritten onto it. The
+# rewrite is forced so both deployment methods behave identically.
+[[redirects]]
+  from = "/.env"
+  to = "/_leak/env.txt"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+    X-Lab-Environment = "intentionally-vulnerable-training-app"
+
+[[headers]]
+  for = "/_leak/env.txt"
+  [headers.values]
+    Content-Type = "text/plain; charset=utf-8"
+
+[[headers]]
+  for = "/.env"
+  [headers.values]
+    Content-Type = "text/plain; charset=utf-8"

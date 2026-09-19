@@ -1,0 +1,8 @@
+# robots.txt - VeloRapid Zuerich GmbH
+User-agent: *
+Disallow: /backup/
+Disallow: /cgi-bin/
+Disallow: /tmp/
+
+# Bitte nicht indexieren - interne Bereiche.
+Sitemap: /sitemap.xml

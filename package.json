@@ -1,0 +1,13 @@
+{
+  "name": "hacken-erlaubt-lab",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Intentionally vulnerable training web application for the workshop \"Hacken erlaubt\" (web enumeration, credential leakage, password cracking).",
+  "license": "MIT",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server/server.js",
+    "verify": "node tools/verify.js",
+    "verify:remote": "node tools/verify.js --url"
+  }
+}
