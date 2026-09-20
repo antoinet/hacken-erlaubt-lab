@@ -125,11 +125,40 @@ participants who cannot find it. It would remove the reason to scan at all.
 The fallback is gentler instead — the banner on 9999 names the web port, so a
 single `nc` unsticks anyone who is lost.
 
+## 9. The flag check is a separate service on port 80
+
+**Chosen:** its own process, its own port, its own visual identity (dark,
+"Hacken erlaubt", nothing VeloRapid about it).
+
+**Rejected:** a `/ctf/` path inside the target application. `gobuster` would
+have found it mid-exercise, it breaks the fiction of a 2019 courier website,
+and it puts a scoreboard endpoint inside the app participants are attacking.
+
+Port 80 specifically, so participants type nothing but the IP — one fewer
+thing to mistype in a room already juggling ports — and so the target keeps
+8088 to itself. The cost is one extra open port in stage 1's scan, which is
+acceptable because the page is self-evidently workshop tooling and tells
+participants the target runs elsewhere. That doubles as a safety net for
+anyone who cannot find 8088.
+
+**No accounts, but tokens.** A name buys a random token that the browser
+keeps; submissions carry it. Not authentication — it stops two people called
+"Max" from overwriting each other and survives a reload. The trade-off is
+explicit: a cleared browser means a new name, which is the right price for a
+two-hour workshop with no sign-up.
+
+Flags are validated server-side against `lib/data.js`, so no flag value ever
+reaches the browser — otherwise reading the scoreboard's own JavaScript would
+be a shortcut past the entire exercise. `tools/verify.js --board` asserts it
+on every deployment.
+
+**Storage is a JSON file in a Docker volume.** Twenty participants and four
+booleans do not need a database. Writes are atomic, and if the volume is not
+writable the server warns and continues in memory: a scoreboard that forgets
+is an annoyance, one that takes the session down is not.
+
 ## Open items
 
-- **Flag collection.** Flags are currently written down by hand. A scoreboard
-  would show the facilitator who is stuck, at the price of a stateful backend
-  that Netlify Functions alone cannot provide.
 - **A sixth account for a second cracking tier.** If a group finishes early, a rule-based or mask
   exercise is the natural extension (see decision 5); it would need a sixth
   account with a password outside `rockyou.txt` but within `best64` reach.

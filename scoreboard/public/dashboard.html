@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Hacken erlaubt &ndash; Dashboard</title>
+<link rel="stylesheet" href="/scoreboard.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap wide">
+    <h1>Hacken erlaubt &ndash; Fortschritt</h1>
+    <p class="sub"><span id="anzahl">&ndash;</span> &middot; aktualisiert automatisch &middot;
+       <a href="/">Flag-Eingabe</a></p>
+  </div>
+</header>
+
+<div class="wrap wide">
+  <!-- Wie weit ist der Raum? Eine Kachel pro Stufe. -->
+  <div class="kpis" id="kpis"></div>
+
+  <h2>Teilnehmende</h2>
+  <div id="tabelle"></div>
+
+  <p class="fuss">
+    Angezeigt wird nur, ob ein Flag gefunden wurde &ndash; keine Zeiten, keine
+    Rangliste. Wer oben steht, hat mehr Stufen geschafft; bei Gleichstand wird
+    alphabetisch sortiert.
+  </p>
+</div>
+
+<script src="/dashboard.js"></script>
+</body>
+</html>

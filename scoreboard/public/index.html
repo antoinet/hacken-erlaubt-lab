@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Hacken erlaubt &ndash; Flag-Check</title>
+<link rel="stylesheet" href="/scoreboard.css">
+</head>
+<body>
+<canvas id="konfetti" aria-hidden="true"></canvas>
+
+<header class="top">
+  <div class="wrap">
+    <h1>Hacken erlaubt &ndash; Flag-Check</h1>
+    <p class="sub">Workshop-Werkzeug &middot; <a href="/dashboard">Dashboard</a></p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- Anmeldung: nur ein Name, kein Passwort -->
+  <section id="anmeldung" class="card" hidden>
+    <h2 style="margin-top:0">Wie sollen wir dich nennen?</h2>
+    <p style="color:var(--text-secondary);font-size:14px;margin-top:0">
+      Kein Passwort, keine E-Mail. Der Name erscheint auf dem Dashboard.
+    </p>
+    <form id="anmeldeForm" autocomplete="off">
+      <label for="name">Name oder K&uuml;rzel</label>
+      <input type="text" id="name" maxlength="24" required autocapitalize="words" spellcheck="false">
+      <button type="submit">Loslegen</button>
+      <div class="msg" id="anmeldeMsg" role="status"></div>
+    </form>
+  </section>
+
+  <!-- Flag-Eingabe -->
+  <section id="spiel" hidden>
+    <p style="color:var(--text-secondary)">
+      Angemeldet als <strong id="wer"></strong>.
+      <span id="stand"></span>
+    </p>
+
+    <div class="card">
+      <form id="flagForm" autocomplete="off">
+        <label for="flag">Flag eingeben</label>
+        <input type="text" id="flag" class="flag" placeholder="HACKEN-ERLAUBT{...}" required spellcheck="false" autocapitalize="none">
+        <button type="submit">Pr&uuml;fen</button>
+        <div class="msg" id="flagMsg" role="status" aria-live="polite"></div>
+      </form>
+    </div>
+
+    <h2>Deine Stufen</h2>
+    <ul class="stufen" id="stufen"></ul>
+
+    <p class="fuss">
+      Das Ziel der &Uuml;bung l&auml;uft nicht hier, sondern auf einem anderen Port
+      desselben Servers &ndash; welchem, findest du in Aufgabe 1 heraus.
+    </p>
+  </section>
+
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

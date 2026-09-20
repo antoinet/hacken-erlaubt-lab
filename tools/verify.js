@@ -6,6 +6,7 @@
  *   node tools/verify.js                   # offline: data + attack chain
  *   node tools/verify.js --url <basis>     # additionally probe the web app
  *   node tools/verify.js --decoys <host>   # additionally probe the decoys
+ *   node tools/verify.js --board <url>     # additionally probe the flag check
  *
  * Run the remote check against the Netlify deployment before every workshop:
  * it confirms that the three discoverable artefacts really are reachable and
@@ -71,6 +72,7 @@ const argValue = (flag) => {
 
 const baseUrl = (argValue('--url') || '').replace(/\/+$/, '') || null;
 const decoyHost = argValue('--decoys');
+const boardUrl = (argValue('--board') || '').replace(/\/+$/, '') || null;
 
 async function probe() {
   const expect = [
@@ -95,12 +97,19 @@ async function probe() {
     }
   }
 
-  const login = await fetch(`${baseUrl}/api/login`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ benutzername: 'dispo_ro', passwort: 'Sommerloch2019!' }),
-  });
-  check('POST /api/login works on the deployment', login.status === 200, `got ${login.status}`);
+  try {
+    const login = await fetch(`${baseUrl}/api/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ benutzername: 'dispo_ro', passwort: 'Sommerloch2019!' }),
+    });
+    check('POST /api/login works on the deployment', login.status === 200, `got ${login.status}`);
+  } catch (err) {
+    // An unreachable host is the most likely thing this script ever meets
+    // (firewall, wrong port, container not started). Report it as a failed
+    // check like any other — never as an unhandled rejection.
+    check('POST /api/login works on the deployment', false, err.message);
+  }
 }
 
 /**
@@ -144,7 +153,65 @@ async function probeDecoys() {
   check('gateway banner points at the web port', /Port \d+/.test(gateway));
 }
 
+/**
+ * Register a throwaway participant, submit a flag, read the dashboard, then
+ * delete the participant again so the scoreboard is empty for the workshop.
+ */
+async function probeBoard() {
+  const name = `selbsttest-${Date.now().toString().slice(-6)}`;
+  let token = null;
+  try {
+    const register = await fetch(`${boardUrl}/api/register`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    const body = await register.json();
+    token = body.token;
+    check('flag check accepts a registration', register.status === 200 && Boolean(token));
+
+    const submit = await fetch(`${boardUrl}/api/flag`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ flag: ` ${FLAGS.stage1.toUpperCase()} ` }),
+    });
+    const result = await submit.json();
+    check('flag check accepts a correct flag (case/space tolerant)', result.korrekt === true && result.stufe === 1);
+
+    const wrong = await fetch(`${boardUrl}/api/flag`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ flag: 'HACKEN-ERLAUBT{falsch}' }),
+    });
+    check('flag check rejects a wrong flag', (await wrong.json()).korrekt === false);
+
+    const dashboard = await fetch(`${boardUrl}/api/dashboard`);
+    const board = await dashboard.json();
+    check('dashboard lists all four stages', Array.isArray(board.stufen) && board.stufen.length === 4);
+    check(
+      'dashboard never ships a flag to the browser',
+      !JSON.stringify(board).includes('HACKEN-ERLAUBT{')
+    );
+
+    const page = await (await fetch(`${boardUrl}/app.js`)).text();
+    check('client code contains no flag values', !Object.values(FLAGS).some((f) => page.includes(f)));
+  } catch (err) {
+    check('flag check reachable', false, err.message);
+  } finally {
+    if (token) {
+      await fetch(`${boardUrl}/api/me`, {
+        method: 'DELETE',
+        headers: { authorization: `Bearer ${token}` },
+      }).catch(() => {});
+    }
+  }
+}
+
 (async () => {
+  if (boardUrl) {
+    console.log(`\nProbing flag check at ${boardUrl}`);
+    await probeBoard();
+  }
   if (decoyHost) {
     console.log(`\nProbing decoy services on ${decoyHost}`);
     await probeDecoys();

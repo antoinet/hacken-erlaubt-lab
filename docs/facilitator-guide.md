@@ -11,7 +11,7 @@ password cracking, in that order. For the attack chain itself see
 
 ```bash
 docker compose up -d --build
-node tools/verify.js --url http://<host>:8088 --decoys <host>
+node tools/verify.js --url http://<host>:8088 --decoys <host> --board http://<host>
 ```
 
 All checks must pass. The ones that matter most:
@@ -23,6 +23,10 @@ All checks must pass. The ones that matter most:
 - **The five decoy checks pass.** Run them from outside the host as well as
   on it — a provider firewall that blocks 6379 or 9999 silently removes the
   full-scan lesson and flag 1.
+- **The flag check answers on port 80** and the dashboard is empty. The
+  pre-flight registers a throwaway participant and deletes it again; if names
+  from an earlier group are still listed, clear them with
+  `docker compose down -v && docker compose up -d`.
 
 Then scan it yourself, from a machine like the participants':
 
@@ -48,10 +52,18 @@ SSH to your own address in the provider's firewall first.
 Do this **in the VM image**, not live in front of the room. A missing
 `rockyou.txt` costs ten minutes and all the momentum.
 
-### 3. Decide how you hand out the target URL
+### 3. Open the flag check on the projector
 
-Put it on the hand-out and on a slide. Participants will mistype it, and every
-mistyped host is a scan against someone else's server.
+`http://<ip>/dashboard` — see [`scoreboard.md`](scoreboard.md). Leave it up
+during the exercise: the per-stage tiles read as a funnel, and where they
+stop filling is where the room is stuck. Participants submit their flags at
+`http://<ip>/` (just the IP, no port).
+
+### 4. Decide what you hand out
+
+Participants get **one IP address** — finding the ports is stage 1. Put it on
+the hand-out and on a slide. They will mistype it, and every mistyped host is
+a scan against someone else's server.
 
 ## Do not run the enumeration exercise against Netlify
 
@@ -81,7 +93,7 @@ exercises.
 
 | Time | Block | Content |
 |---|---|---|
-| 0:00 | Framing | Authorisation first: this one IP is authorised, the range around it is not. Art. 143bis StGB in one sentence. |
+| 0:00 | Framing | Authorisation first: this one IP is authorised, the range around it is not. Art. 143bis StGB in one sentence. Everyone opens `http://<ip>/` and claims a name. |
 | 0:05 | Scanning | `nmap -Pn`, then `-sV` on what turned up. `nc <ip> 9999` for the banner. **Flag 1.** |
 | 0:20 | Full scan | `nmap -p-` finds Redis on 6379, which the default scan missed. Discuss why the defaults exist. |
 | 0:30 | Enumeration | `gobuster` against the web port, `/.env` found and read. **Flag 2.** |
@@ -89,8 +101,8 @@ exercises.
 | 0:55 | Cracking | `hashcat -m 0`; four of five passwords fall. **Flag 4** after logging in as `s.brunner`. |
 | 1:10 | Debrief | The six fixes (see `scenario.md`), plus: which one would have stopped the attack earliest? |
 
-Collecting flags in a shared chat or on a flipchart keeps the pace visible
-without you asking "are you through yet?".
+The flag check does the collecting: you can see who is through each stage
+without asking "are you there yet?".
 
 If you are short on time, cut the full-scan block (0:20) rather than
 compressing the debrief — it is the block that makes the rest a lesson
@@ -112,9 +124,14 @@ instead of a game.
 | nmap reports 8088 as `https-alt` or the web app is unreachable | The application must be published on 8088, not 8443 — nmap assumes TLS on 8443 and never fingerprints plain HTTP there. |
 | Participants see port 22 | Real SSH is exposed. Restrict it to your own address in the provider's firewall; `ufw` will not do it, because Docker bypasses ufw. |
 | A decoy port is unreachable from the VMs | Provider firewall. Docker's own rules publish the port regardless of `ufw`. |
+| "Name ist schon vergeben" | Somebody took it, or it is left over from an earlier group. Pick another, or clear the board with `docker compose down -v`. |
+| A participant's progress vanished | Cleared browser data or a different device — the token lives in `localStorage`. They register again under a new name; nothing else is affected. |
+| A correct flag is rejected | Almost always a copy-paste that grabbed a newline or half the brace. Case and surrounding spaces are already tolerated. |
 
-Nothing in the application persists — there is no state to reset between
-groups. Participants cannot lock each other out or modify the data.
+Nothing in the target application persists — there is no state to reset
+between groups, and participants cannot lock each other out or modify the
+data. The flag check does keep state, in a Docker volume: clear it between
+groups with `docker compose down -v && docker compose up -d`.
 
 ## Ethics and authorisation
 

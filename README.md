@@ -16,8 +16,9 @@ techniques the workshop teaches:
 
 Each stage is the next one's starting point: the scan hands over the web
 port, enumeration hands over the credentials, the portal hands over the
-hashes. Each yields a flag (`HACKEN-ERLAUBT{…}`), so progress is visible
-without the facilitator looking over shoulders.
+hashes. Each yields a flag (`HACKEN-ERLAUBT{…}`), which participants submit
+to a flag check on the same host — so the presenter can see the whole room's
+progress on one screen without looking over shoulders.
 
 > [!WARNING]
 > **This application is vulnerable on purpose.** Deploy it only as a training
@@ -34,6 +35,7 @@ without the facilitator looking over shoulders.
 | [`docs/handout-de.md`](docs/handout-de.md) | The participant hand-out, in German, spoiler-free |
 | [`docs/design-decisions.md`](docs/design-decisions.md) | Why the scenario is built this way, and what was rejected |
 | [`docs/port-scanning.md`](docs/port-scanning.md) | The scanning stage: services, commands, host setup |
+| [`docs/scoreboard.md`](docs/scoreboard.md) | The flag check and presenter dashboard |
 
 ## Running it
 
@@ -56,18 +58,25 @@ docker compose up -d --build
 node tools/verify.js --url http://<host>:8088 --decoys <host>
 ```
 
-That starts both halves of the environment: the web application on **8088**,
-and the decoy services the scanning stage discovers on 2222, 3306, 6379 and
-9999. Without Docker, each runs on its own and needs no dependencies:
+That starts all three parts of the environment:
+
+| | Port | What it is |
+|---|---|---|
+| Target | 8088 | The VeloRapid web application |
+| Decoys | 2222, 3306, 6379, 9999 | Banner services the scan discovers |
+| Flag check | 80 | Participant flag entry (`/`) and presenter dashboard (`/dashboard`) |
+
+Without Docker, each runs on its own and needs no dependencies:
 
 ```bash
 node server/server.js --port 8088     # the web application
 node decoys/server.js                 # the decoy services
+node scoreboard/server.js --port 80   # flag check + dashboard
 ```
 
 Checklist for a public host:
 
-- **Open the five workshop ports** — 2222, 3306, 6379, 8088, 9999 — and
+- **Open the six workshop ports** — 80, 2222, 3306, 6379, 8088, 9999 — and
   **restrict real SSH (22) to your own address**, or participants will find
   it and the story about port 2222 gets muddled. Note that Docker writes its
   own iptables rules and **bypasses ufw**: use the provider's firewall
@@ -100,13 +109,14 @@ enumeration exercise, per the warning above.
 ### Verify after every deployment
 
 ```bash
-node tools/verify.js --url http://<host>:8088 --decoys <host>
+node tools/verify.js --url http://<host>:8088 --decoys <host> --board http://<host>
 ```
 
 This checks the data and the whole attack chain; against a live host it also
 confirms that `/.env`, `/backup/` and `/intranet/` are reachable, that
 unknown paths still return 404 (a wildcard 200 would make `gobuster`
-useless), and that each decoy still answers with the banner its stage needs.
+useless), that each decoy still answers with the banner its stage needs, and
+that the flag check accepts a flag without ever shipping one to the browser.
 Run it from outside the host as well — a provider firewall blocking 6379 or
 9999 silently removes flag 1 and the full-scan lesson.
 
@@ -121,19 +131,24 @@ lib/                  data, auth and the API — shared by both runtimes
 netlify/functions/    Netlify adapter
 server/               dependency-free Node server for self-hosting
 decoys/               banner-only services for the port-scanning stage
+scoreboard/           flag check + presenter dashboard (its own service)
 tools/                wordlist for gobuster + pre-flight verification
 ```
 
-`lib/` holds the entire backend as one pure function so the hosted deployment
-and the self-hosted container cannot drift apart.
+`lib/` holds the web application's backend as one pure function so the two
+runtimes cannot drift apart, and it is also where the four flag values live —
+the decoys and the scoreboard import them from there, so there is one place
+to change them.
 
 ## What is *not* vulnerable
 
 Only the weaknesses above are intended. Session tokens are HMAC-signed, the
 database view is read-only with no free-form SQL, the self-hosted server
-blocks path traversal, and the decoy services are banners with nothing behind
-them — no real MySQL, no real Redis, nothing to log into. Participants should
-not be able to shortcut the chain or break out of the sandbox. If you find another way through, that is a
+blocks path traversal, the decoy services are banners with nothing behind
+them — no real MySQL, no real Redis, nothing to log into — and the flag check
+validates server-side, so its client code cannot be read for answers.
+Participants should not be able to shortcut the chain or break out of the
+sandbox. If you find another way through, that is a
 bug worth an issue.
 
 ## License

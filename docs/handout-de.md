@@ -2,6 +2,9 @@
 
 **Ziel:** `__ZIEL-IP-EINSETZEN__` (eine einzelne IP-Adresse)
 
+**Flags abgeben:** `http://__ZIEL-IP-EINSETZEN__/` — Namen eintragen, fertig.
+Kein Passwort. Dort siehst du auch, welche Stufen du schon hast.
+
 ## Spielregeln
 
 - Angriffe sind **ausschliesslich** gegen die oben genannte IP-Adresse
@@ -20,7 +23,9 @@ wurde 2019 von einem Freelancer aufgesetzt und seither nicht mehr angefasst.
 Sie haben nichts als eine IP-Adresse — nicht einmal eine URL.
 
 Ihre Aufgabe: Finden Sie heraus, wie weit Sie kommen — und sammeln Sie
-unterwegs vier Flags im Format `HACKEN-ERLAUBT{...}`.
+unterwegs vier Flags im Format `HACKEN-ERLAUBT{...}`. Jedes Flag geben Sie
+oben auf der Flag-Seite ein; Gross-/Kleinschreibung und Leerzeichen am Rand
+spielen keine Rolle.
 
 ---
 

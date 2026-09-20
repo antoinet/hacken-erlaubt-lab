@@ -1,0 +1,134 @@
+/* Flag check + presenter dashboard.
+   Dark surface throughout: it reads well on a projector and makes this
+   visibly the workshop's own tooling rather than part of the target site. */
+
+:root {
+  color-scheme: dark;
+  --surface-1: #1a1a19;
+  --surface-2: #232322;
+  --surface-3: #2c2c2a;
+  --line: #3a3a37;
+  --text-primary: #ffffff;
+  --text-secondary: #c3c2b7;
+  --text-muted: #8a8a80;
+  --good: #0ca30c;
+  --critical: #d03b3b;
+  --accent: #3987e5;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font-family: var(--font);
+  line-height: 1.55;
+}
+
+a { color: var(--accent); }
+
+.wrap { max-width: 720px; margin: 0 auto; padding: 28px 20px 60px; }
+.wrap.wide { max-width: 1200px; }
+
+header.top { border-bottom: 1px solid var(--line); background: var(--surface-2); }
+header.top .wrap { padding-top: 18px; padding-bottom: 18px; display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+header.top h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+header.top .sub { color: var(--text-muted); font-size: 13px; margin: 0; }
+
+h2 { font-size: 17px; margin: 28px 0 10px; }
+
+.card { background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 20px; }
+
+label { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+
+input[type=text] {
+  width: 100%; padding: 12px 14px; font-size: 17px; font-family: var(--font);
+  background: var(--surface-3); color: var(--text-primary);
+  border: 1px solid var(--line); border-radius: 6px;
+}
+input.flag { font-family: var(--mono); font-size: 15px; }
+input[type=text]:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+button {
+  margin-top: 12px; padding: 11px 22px; font-size: 16px; font-weight: 600; font-family: var(--font);
+  background: var(--accent); color: #fff; border: 0; border-radius: 6px; cursor: pointer;
+}
+button:hover { filter: brightness(1.1); }
+button:disabled { opacity: 0.5; cursor: default; }
+
+.msg { margin-top: 14px; padding: 11px 14px; border-radius: 6px; font-size: 15px; display: none; }
+.msg.show { display: block; }
+.msg.ok { background: rgba(12, 163, 12, 0.14); border: 1px solid var(--good); color: #7ee2a8; }
+.msg.err { background: rgba(208, 59, 59, 0.14); border: 1px solid var(--critical); color: #f5a3a3; }
+.msg.info { background: var(--surface-3); border: 1px solid var(--line); color: var(--text-secondary); }
+
+/* --- Stage list (participant view) --- */
+.stufen { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.stufe {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 8px; padding: 14px 16px;
+}
+.stufe .marke {
+  flex: 0 0 34px; height: 34px; border-radius: 50%;
+  border: 2px solid var(--line); color: var(--text-muted);
+  display: grid; place-items: center; font-size: 15px; font-weight: 700;
+}
+.stufe .titel { font-weight: 600; }
+.stufe .werkzeug { font-size: 13px; color: var(--text-muted); font-family: var(--mono); }
+.stufe[data-gefunden="true"] { border-color: var(--good); }
+.stufe[data-gefunden="true"] .marke { border-color: var(--good); background: var(--good); color: #fff; }
+.stufe[data-gefunden="true"] .titel { color: #7ee2a8; }
+
+/* The flip that plays when a flag lands. */
+@keyframes stempel {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.35) rotate(-8deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+.stufe.frisch .marke { animation: stempel 620ms cubic-bezier(.2,1.4,.4,1); }
+@keyframes ruettel {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-7px); }
+  40%, 80% { transform: translateX(7px); }
+}
+.ruettel { animation: ruettel 380ms ease; }
+
+canvas#konfetti { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
+
+@media (prefers-reduced-motion: reduce) {
+  .stufe.frisch .marke, .ruettel { animation: none; }
+}
+
+/* --- Dashboard --- */
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin: 22px 0 8px; }
+.kpi { background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
+.kpi .zahl { font-size: 34px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.kpi .titel { font-size: 13px; color: var(--text-secondary); }
+.kpi .werkzeug { font-size: 12px; color: var(--text-muted); font-family: var(--mono); }
+/* Magnitude: one hue, 4px rounded end, 2px gap from the track. */
+.meter { height: 8px; background: var(--surface-3); border-radius: 4px; margin-top: 10px; overflow: hidden; }
+.meter span { display: block; height: 100%; background: var(--good); border-radius: 4px; transition: width 400ms ease; }
+
+/* Sized for a projector at the back of the room, not a laptop. */
+table.matrix { border-collapse: separate; border-spacing: 0 2px; width: 100%; margin-top: 10px; }
+table.matrix th { text-align: left; font-size: 15px; color: var(--text-secondary); padding: 6px 10px; font-weight: 600; }
+table.matrix th.stufe-kopf { text-align: center; width: 132px; }
+table.matrix td { background: var(--surface-2); padding: 12px 10px; font-size: 18px; }
+table.matrix td:first-child { border-radius: 6px 0 0 6px; font-weight: 600; }
+table.matrix td:last-child { border-radius: 0 6px 6px 0; }
+table.matrix td.zelle { text-align: center; }
+
+/* Status is never colour alone: the mark carries a glyph and a text label. */
+.status { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; }
+.status .glyph { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; }
+.status.ja .glyph { background: var(--good); color: #fff; }
+.status.ja { color: #7ee2a8; }
+.status.nein .glyph { border: 2px solid var(--line); color: transparent; }
+.status.nein { color: var(--text-muted); }
+
+.leer { color: var(--text-muted); padding: 30px 0; text-align: center; }
+.fuss { margin-top: 26px; font-size: 13px; color: var(--text-muted); }

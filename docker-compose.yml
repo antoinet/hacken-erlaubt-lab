@@ -19,6 +19,21 @@ services:
       - "8088:8080"
     restart: unless-stopped
 
+  # Workshop tooling, not part of the fiction: participants reach the flag
+  # check at http://<ip>/ and the presenter dashboard at /dashboard.
+  scoreboard:
+    build: .
+    image: velorapid-lab
+    container_name: velorapid-scoreboard
+    command: ["node", "scoreboard/server.js"]
+    environment:
+      SCOREBOARD_DATA: "/data/scoreboard.json"
+    volumes:
+      - scoreboard-data:/data
+    ports:
+      - "80:8080"
+    restart: unless-stopped
+
   decoys:
     build: .
     image: velorapid-lab
@@ -32,3 +47,8 @@ services:
       - "6379:6379"   # Redis       (outside nmap's top-1000 on purpose)
       - "9999:9999"   # legacy gateway banner, carries the stage-1 flag
     restart: unless-stopped
+
+volumes:
+  # Survives `docker compose restart`, so a stumble mid-workshop does not
+  # wipe everyone's progress. Remove it between groups: docker compose down -v
+  scoreboard-data:
