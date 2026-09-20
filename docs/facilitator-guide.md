@@ -38,29 +38,25 @@ Do this **in the VM image**, not live in front of the room. A missing
 Put it on the hand-out and on a slide. Participants will mistype it, and every
 mistyped host is a scan against someone else's server.
 
-## Rate limiting — read this before 20 people start scanning
+## Do not run the enumeration exercise against Netlify
 
-`gobuster`'s default is 10 concurrent threads. Twenty participants against a
-~200-word list is ~4 000 requests in a few seconds; against a full
-`common.txt` (4 600 words) it is ~90 000. If the lab VMs share one egress IP,
-Netlify sees a single source hammering the site and may start throttling or
-blocking — mid-exercise, for everyone at once.
+This was tried and it does not work: Netlify's abuse protection **blocks** the
+scanning client rather than slowing it down, and the enumeration stage stops
+dead. A shorter wordlist and `-t 5` do not prevent it — the protection reacts
+to the pattern, not only the volume. Host the target yourself (see the README);
+Netlify is fine for showing the site, nothing more.
 
-Mitigations, in order of effectiveness:
+Two things still matter on your own host:
 
-1. **Use the supplied wordlist** (`tools/workshop-wordlist.txt`, ~190 entries)
-   rather than a full SecLists run. It contains every path that matters.
-2. **Teach `-t 5`.** Lower thread counts are also better tradecraft: loud
-   scanning is how real attackers get caught. That framing makes the
-   restriction a lesson rather than a limitation.
-3. **Stagger the start** if the group is large — half the room scans while the
-   other half reads `robots.txt`.
-4. **Self-host instead.** `docker compose up` in each participant's own VM
-   removes the shared-egress problem completely and works offline. Same
-   application, same chain; only the URL changes.
-
-If Netlify does throttle you mid-session, switch the room to the local
-container — this is exactly why the self-hosted runtime exists.
+1. **Thread count is tradecraft, not just politeness.** `gobuster`'s default
+   is 10 concurrent threads; twenty participants is 200 concurrent requests at
+   your little server. It will cope — the files are tiny — but teach `-t 5`
+   anyway, because loud scanning is how real attackers get caught. If you have
+   access logs, show them during the debrief: a wall of 404s from one address
+   in four seconds is exactly what the defender sees.
+2. **Use the supplied wordlist.** `tools/workshop-wordlist.txt` (~190 entries)
+   contains every path that matters. A full SecLists run adds thousands of
+   requests and finds nothing extra.
 
 ## Suggested run of show (60 minutes)
 

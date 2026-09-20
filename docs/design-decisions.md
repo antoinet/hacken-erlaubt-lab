@@ -79,17 +79,22 @@ The consequence: this app is *not* a general-purpose vulnerable playground
 (that is what DVWA and Juice Shop are for). It teaches exactly three
 techniques, well.
 
-## 7. Netlify now, self-hosting available
+## 7. Self-hosted target; Netlify only as a preview
 
-Netlify is free, needs no maintenance, and gives every participant the same
-target over plain HTTPS. Its limits are accepted knowingly: no custom ports
-(hence no nmap module), and a shared CDN edge that must not be port-scanned.
+**Originally:** Netlify as the workshop target — free, no maintenance, the
+same HTTPS URL for everyone — with self-hosting available for the nmap module.
 
-The gobuster exercise puts measurable load on that edge — see the rate-limit
-section in [`facilitator-guide.md`](facilitator-guide.md). The supplied
-~190-entry wordlist and `-t 5` keep a 20-person class well inside sane
-volumes; if it ever becomes a problem, the same scenario runs from a local
-container.
+**Revised after testing:** Netlify's abuse protection *blocks* a `gobuster`
+client outright, not just throttles it, so the enumeration stage cannot run
+there at all. Reducing threads and shrinking the wordlist does not help; the
+protection reacts to the request pattern. The workshop target is therefore a
+host the organiser controls, and Netlify keeps only a preview role.
+
+This is why `lib/` was kept runtime-agnostic (decision 4): the move cost a
+configuration change rather than a rewrite. It also removes the two arguments
+that had deferred the nmap module — no custom ports, and a CDN edge that is
+not ours to scan. A self-hosted target is ours, and can listen wherever we
+like.
 
 ## Open items
 

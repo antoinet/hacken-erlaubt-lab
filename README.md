@@ -39,28 +39,65 @@ instead.
 
 ## Running it
 
-### Locally / in a lab VM (no dependencies, works offline)
+> [!IMPORTANT]
+> **Netlify cannot host the gobuster exercise.** Netlify's abuse protection
+> blocks the scanning client — not merely throttles it — so the enumeration
+> stage dies mid-session. Lower thread counts and a short wordlist do not
+> avoid this. Host the application yourself; Netlify is only useful as a
+> read-only preview of the site.
+
+### On a host you control (the deployment the workshop uses)
+
+Any small VM works — a DigitalOcean droplet, a VM in the lab, a laptop on the
+room's network. Docker is the least fiddly route:
 
 ```bash
-node server/server.js --port 8080     # http://localhost:8080
+git clone https://github.com/antoinet/hacken-erlaubt-lab.git
+cd hacken-erlaubt-lab
+docker compose up -d --build          # http://<host>:8443
+node tools/verify.js --url http://<host>:8443
 ```
 
-or, on a non-standard port via container:
+Without Docker, the server has no dependencies at all:
 
 ```bash
-docker compose up --build             # http://localhost:8443
+node server/server.js --port 8443
 ```
 
-### On Netlify
+Checklist for a public host:
+
+- **Open the port you publish** (`ufw allow 8443/tcp`, plus the provider's own
+  firewall if it has one). Everything else stays closed unless the nmap module
+  needs it — see [`docs/port-scanning.md`](docs/port-scanning.md).
+- **Plain HTTP is fine** for a training target, and avoids a certificate
+  detour. Put the real URL, scheme and port included, on the hand-out: for
+  example `http://203.0.113.10:8443`, not `https://…`.
+- **Choose the port deliberately.** A non-standard port is what makes a port
+  scan worth running; if the nmap module lands on the same host, the web
+  application should *only* be reachable there, so participants have to find
+  it.
+- **Use a throwaway host.** This application is vulnerable by design. Give it
+  its own VM, nothing else on it, SSH by key only — and destroy it after the
+  workshop rather than leaving an open training target on the internet.
+- **Restrict the source if you can.** If the lab has a known egress address,
+  limiting inbound traffic to it keeps the target off the wider internet for
+  the price of one firewall rule.
+
+The container runs unprivileged, holds no real data and writes nothing to
+disk, so a compromise of the application itself costs you the VM and nothing
+else.
+
+### On Netlify (preview only)
 
 Connect the repository; `netlify.toml` sets `site/` as the publish directory
 and `netlify/functions/` as the functions directory. No build step, no
-dependencies.
+dependencies. Useful for showing the site or checking a change — not for the
+enumeration exercise, per the warning above.
 
-After every deployment, verify that the exercise is intact:
+### Verify after every deployment
 
 ```bash
-node tools/verify.js --url https://<your-site>.netlify.app
+node tools/verify.js --url http://<host>:8443
 ```
 
 This checks the data, the whole attack chain, and — against a live URL — that
