@@ -19,7 +19,10 @@ businesses:
 3. Passwords have been stored as unsalted MD5 since 2014, and the company-wide
    password change was postponed to "Q3" — of 2019.
 
-The participants play an outside attacker who knows nothing but the URL.
+The participants play an outside attacker who knows nothing but an IP
+address. The company's own hosting is equally dated: services nobody
+remembers are still listening, and the website runs on a port somebody picked
+years ago and never revisited.
 
 ## Cast
 
@@ -38,31 +41,61 @@ hash that refuses to fall is the discussion hook for *why* it resists.
 ## The chain
 
 ```
+  nmap -Pn <ip>          ->  2222 ssh, 3306 mysql, 8088 http, 9999 ???
+  nc <ip> 9999           ->  gateway banner: web on 8088          STAGE 1
+  nmap -Pn -p- <ip>      ->  6379 redis (missed by the default scan)
   GET /robots.txt        ->  Disallow: /backup/   (breadcrumb, not the goal)
-  gobuster               ->  /.env        200     STAGE 1
-                         ->  /intranet/   301/200 STAGE 2 target
+  gobuster               ->  /.env        200                     STAGE 2
+                         ->  /intranet/   301/200 STAGE 3 target
                          ->  /backup/     200     old page + internal notes
   /.env                  ->  dispo_ro : Sommerloch2019!
-  POST /api/login        ->  portal session (role: service)
+  POST /api/login        ->  portal session (role: service)       STAGE 3
   portal > Datenbank     ->  table `mitarbeiter` with MD5 hashes
-  hashcat                ->  s.brunner : trustno1                STAGE 3
-  POST /api/login        ->  portal session (role: admin) -> Administration tab
+  hashcat                ->  s.brunner : trustno1
+  POST /api/login        ->  portal session (role: admin)         STAGE 4
 ```
 
 ### Flags
 
 | Stage | Flag | Where |
 |---|---|---|
-| 1 | `HACKEN-ERLAUBT{env_datei_im_webroot}` | last line of `/.env` |
-| 2 | `HACKEN-ERLAUBT{dispo_portal_offen}` | portal overview, after logging in |
-| 3 | `HACKEN-ERLAUBT{md5_ist_kein_schutz}` | Administration tab, after cracking |
+| 1 | `HACKEN-ERLAUBT{offener_port_verraet_dienst}` | banner on port 9999 |
+| 2 | `HACKEN-ERLAUBT{env_datei_im_webroot}` | last line of `/.env` |
+| 3 | `HACKEN-ERLAUBT{dispo_portal_offen}` | portal overview, after logging in |
+| 4 | `HACKEN-ERLAUBT{md5_ist_kein_schutz}` | Administration tab, after cracking |
+
+All four are defined in `lib/data.js`; the decoy services import them from
+there, so there is one place to change them.
 
 ## Walkthrough
 
-### Stage 0 — look around (5 min)
+### Stage 1 — scan (15 min)
 
 ```bash
-curl -s https://<ziel>/robots.txt
+nmap -Pn <ziel-ip>                                   # top 1000 ports
+nmap -sV -Pn -p 2222,3306,8088,9999 <ziel-ip>        # what is running
+nc <ziel-ip> 9999                                    # flag 1
+nmap -Pn -p- <ziel-ip>                               # finds 6379 as well
+```
+
+The default scan reports SSH on 2222, MySQL on 3306, something HTTP-ish on
+8088 and an unknown service on 9999. Version detection turns that into a
+story: an SSH moved off 22, a database exposed to the internet, nginx 1.14.0
+from 2018, and a legacy gateway whose banner hands over the web port — and
+flag 1.
+
+The full scan is worth the extra minute: Redis on 6379 is outside nmap's
+top-1000 and the default scan never sees it. Details and measured timings in
+[`port-scanning.md`](port-scanning.md).
+
+> **Question for the room:** four of these five services are things nobody at
+> VeloRapid would say they run. How would the company even know they are
+> there?
+
+### Stage 2a — look around (5 min)
+
+```bash
+curl -s http://<ziel-ip>:8088/robots.txt
 ```
 
 `robots.txt` disallows `/backup/`, `/cgi-bin/` and `/tmp/`. `/backup/` exists
@@ -73,10 +106,10 @@ root" — a hint towards stage 1 without naming the file.
 
 This is the teaching point that `robots.txt` is a *map*, not a lock.
 
-### Stage 1 — enumeration (15 min)
+### Stage 2b — enumeration (15 min)
 
 ```bash
-gobuster dir -u https://<ziel> -w tools/workshop-wordlist.txt -t 5 -o gobuster.txt
+gobuster dir -u http://<ziel-ip>:8088 -w tools/workshop-wordlist.txt -t 5 -o gobuster.txt
 ```
 
 Expected hits: `/.env` (200), `/intranet/` (301 → 200), `/backup/` (200),
@@ -84,7 +117,7 @@ Expected hits: `/.env` (200), `/intranet/` (301 → 200), `/backup/` (200),
 route, worth a note).
 
 ```bash
-curl -s https://<ziel>/.env
+curl -s http://<ziel-ip>:8088/.env
 ```
 
 Yields the database block — `DB_USERNAME=dispo_ro`,
@@ -93,25 +126,25 @@ password, an API key and flag 1. The file also states outright that the portal
 login uses the database service account, so nobody gets stuck guessing which
 of the leaked secrets to try.
 
-### Stage 2 — walk in (10 min)
+### Stage 3 — walk in (10 min)
 
-Open `https://<ziel>/intranet/` and log in as `dispo_ro` /
+Open `http://<ziel-ip>:8088/intranet/` and log in as `dispo_ro` /
 `Sommerloch2019!`. The dashboard shows dispatch orders, customers and a
-read-only database browser. Flag 2 is on the overview tab.
+read-only database browser. Flag 3 is on the overview tab.
 
 Under **Datenbank → mitarbeiter** the staff table is visible, including
 `passwort_md5`. "Hashes exportieren" downloads `velorapid_hashes.txt` in
 `username:hash` form. The same thing from the command line:
 
 ```bash
-TOKEN=$(curl -s https://<ziel>/api/login \
+TOKEN=$(curl -s http://<ziel-ip>:8088/api/login \
   -H 'content-type: application/json' \
   -d '{"benutzername":"dispo_ro","passwort":"Sommerloch2019!"}' | jq -r .token)
 
-curl -s https://<ziel>/api/export/hashes -H "authorization: Bearer $TOKEN"
+curl -s http://<ziel-ip>:8088/api/export/hashes -H "authorization: Bearer $TOKEN"
 ```
 
-### Stage 3 — cracking (20 min)
+### Stage 4 — cracking (20 min)
 
 ```bash
 # rockyou.txt on Kali is shipped compressed:
@@ -133,28 +166,32 @@ john --format=raw-md5 --show velorapid_hashes.txt
 Four accounts fall; `dispo_ro` does not.
 
 Log out of the portal and log back in as `s.brunner` / `trustno1`. The
-**Administration** tab appears: business metrics, flag 3, and the debrief —
+**Administration** tab appears: business metrics, flag 4, and the debrief —
 the five things VeloRapid should have done differently.
 
 ## Debrief talking points
 
-1. **Secrets in the web root.** `.env` in a published directory is one HTTP
+1. **Attack surface nobody inventoried.** Every service on that host was
+   put there for a reason that expired years ago. You cannot secure what you
+   do not know you run; the scan the participants just did is one a defender
+   should run against their own estate first.
+2. **Secrets in the web root.** `.env` in a published directory is one HTTP
    request away from everyone. Configuration belongs outside the document
    root, and secrets belong in a secret store, not in git.
-2. **Security by obscurity.** An unlinked URL is not a secret: a wordlist
+3. **Security by obscurity.** An unlinked URL is not a secret: a wordlist
    finds `/intranet/` in seconds. Ask the room how many "internal" tools at
    their own workplace are protected only by not being linked.
-3. **Shared service accounts.** One account everyone knows, never rotated,
+4. **Shared service accounts.** One account everyone knows, never rotated,
    makes every action unattributable — the portal cannot distinguish the
    dispatcher from the attacker.
-4. **Unsalted MD5.** Fast hashes plus common passwords equals instant
+5. **Unsalted MD5.** Fast hashes plus common passwords equals instant
    compromise. Today: bcrypt, scrypt or Argon2id, salted, deliberately slow.
    Point at `dispo_ro`: the same algorithm, but the password is not in the
    wordlist — so the *password* bought the time the *algorithm* did not.
-5. **Password reuse and no MFA.** Cracking one password walked straight into
+6. **Password reuse and no MFA.** Cracking one password walked straight into
    admin. MFA, rate limiting and alerting on failed logins each would have
    broken the chain.
 
-A good closing question: *which single one of these five fixes would have
+A good closing question: *which single one of these six fixes would have
 stopped the attack earliest?* (Keeping `.env` out of the web root — everything
 downstream depended on it.)

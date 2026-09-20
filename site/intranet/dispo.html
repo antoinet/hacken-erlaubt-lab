@@ -67,7 +67,7 @@ if (session) {
   if (session.rolle === 'admin') document.getElementById('tabAdmin').hidden = false;
   if (session.flag) {
     document.getElementById('flag2').innerHTML =
-      'Zugang zum internen Portal erreicht. Flag 2 von 3: <span class="mono"><b>' +
+      'Zugang zum internen Portal erreicht. Flag 3 von 4: <span class="mono"><b>' +
       esc(session.flag) + '</b></span>';
   }
 }
@@ -189,9 +189,12 @@ async function loadAdmin() {
         '<span class="stat"><b>' + data.kennzahlen.mitarbeiterkonten + '</b><span>Konten</span></span>' +
         '<span class="stat"><b>CHF ' + data.kennzahlen.umsatz_chf.toLocaleString('de-CH') + '</b><span>Jahresumsatz</span></span>' +
       '</div>' +
-      '<p class="flag">Flag 3 von 3: ' + esc(data.flag) + '</p>' +
+      '<p class="flag">Flag 4 von 4: ' + esc(data.flag) + '</p>' +
       '<h3>Was hier schiefgelaufen ist</h3>' +
       '<ol style="font-size:15px;line-height:1.7">' +
+        '<li><b>Unbekannte Angriffsfl&auml;che.</b> Auf dem Server lauschten Dienste, die l&auml;ngst ' +
+          'niemand mehr brauchte &ndash; gefunden mit einem einzigen Portscan. Was man nicht kennt, ' +
+          'kann man nicht absichern.</li>' +
         '<li><b>Konfigurationsdatei im Webroot.</b> Die Datei <span class="mono">.env</span> geh&ouml;rt ' +
           'niemals in ein Verzeichnis, das der Webserver ausliefert &ndash; und Zugangsdaten geh&ouml;ren ' +
           'nicht ins Repository.</li>' +

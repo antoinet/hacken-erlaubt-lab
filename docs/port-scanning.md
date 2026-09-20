@@ -1,102 +1,105 @@
-# The nmap module: why it is not part of this application
+# Stage 1: port scanning
 
-The workshop teaches three techniques. This repository covers two of them.
-Port scanning needs a different target, for two independent reasons.
+The workshop opens here. Participants know one thing — an IP address — and
+the scan is what turns it into a target: a web service on an unusual port,
+which stages 2 to 4 then take apart.
 
-## 1. There is nothing to scan
+## What the host exposes
 
-Netlify serves HTTP on 80 and HTTPS on 443, and redirects the former to the
-latter. There is no way to expose a service on another port — no custom
-listeners, no raw TCP, no way to make the platform answer on 8080 or 3306.
-An `nmap` run against a Netlify-hosted site finds 80 and 443, which is exactly
-what it finds against every other Netlify site. There is no discovery to make,
-and therefore nothing to learn.
+`docker compose up -d` starts the web application and the decoy services
+together. All of it is reachable from the participants' VMs:
 
-## 2. The host is not ours to scan
-
-A Netlify site resolves to shared CDN edge addresses operated by Netlify and
-serving thousands of unrelated customers. Pointing a class at those addresses
-means scanning third-party infrastructure that the workshop organiser cannot
-authorise — and telling participants "this target is authorised" would be
-false. In a workshop whose entire premise is the difference between authorised
-and unauthorised access, that is the one corner that must not be cut.
-
-## What to do instead
-
-The scan target must be a host under your own control, ideally one already
-inside the lab. Options, most to least attractive:
-
-### A. A target container inside each participant's own VM (recommended)
-
-Each participant scans `localhost` or a second container on the lab bridge
-network. Self-contained, offline-capable, no shared infrastructure to overload
-and no authorisation question at all — everyone scans their own machine.
-
-`docker-compose.yml` in this repository already runs the web application on
-the non-standard port 8443 for exactly this purpose. The module would add
-further services with recognisable banners, for example:
-
-| Port | Service | Teaching point |
+| Port | What `nmap -sV` reports | Purpose |
 |---|---|---|
-| 22 → 2222 | SSH on a moved port | "Hidden" ports are found in seconds |
-| 8443 | This web application | The scan *leads into* the gobuster exercise |
-| 3306 | MySQL banner | Database exposed to the network |
-| 6379 | Redis without auth | The classic forgotten service |
+| 2222 | `OpenSSH 7.6p1 Ubuntu 4ubuntu0.3` | "Hidden" SSH: moving a service off its default port hides it from nobody |
+| 3306 | `MySQL 5.7.33-0ubuntu0.18.04.1` | A database listening to the internet |
+| 6379 | `Redis key-value store 5.0.7` | The forgotten service — **outside nmap's top-1000**, so only a full scan finds it |
+| 8088 | `nginx/1.14.0 (Ubuntu)` | The web application: the handover into stage 2 |
+| 9999 | unrecognised; banner readable | Legacy "Dispo-Gateway", carries **flag 1** and names the web port |
 
-This also chains the three techniques into one story: scan → find the web app
-on an odd port → enumerate it → crack what you find. Currently the gobuster
-stage starts from a URL handed out on a slide; with this module it starts from
-something the participants discovered themselves.
+The decoys are banners, not implementations. `nmap -sV` identifies a service
+from what it says on connect, so a greeting is enough — and a real MySQL or
+Redis on a public training host would be an actual vulnerability rather than
+a taught one. There is nothing behind them to log into.
 
-### B. A dedicated target VM in the lab
+## The commands
 
-One shared VM per class, scanned over the lab network. Closer to a real
-network scan (`nmap -sV 10.0.0.0/24` finds hosts, not just ports), but it is
-shared infrastructure: 20 concurrent `-T4` scans against one host is itself a
-small load test, and one participant's mistake affects everyone.
+```bash
+# 1. What is open? (default scan: nmap's top 1000 ports)
+nmap -Pn <ziel-ip>
 
-### C. The host that already serves the web exercise
+# 2. What is actually running there?
+nmap -sV -Pn -p 2222,3306,8088,9999 <ziel-ip>
 
-Since Netlify cannot host the enumeration stage (see the README), the workshop
-target is a VM the organiser controls anyway — in the first run, a DigitalOcean
-droplet. That changes the arithmetic completely: this option used to mean
-buying, hardening and babysitting a VPS for one exercise, and now it means
-adding services to a host that already exists.
+# 3. Read a banner directly — this is where flag 1 is
+nc <ziel-ip> 9999
 
-It also makes the best version of the narrative possible: the web application
-listens *only* on a non-standard port, so the scan is not a warm-up exercise
-but the thing that reveals the target for stage two.
+# 4. The full scan finds what the default one missed
+nmap -Pn -p- <ziel-ip>
+```
 
-Candidate services on that host:
+Step 4 is the point of the exercise as much as step 1: Redis sits on 6379,
+which is *not* in nmap's top-1000, so the default scan never sees it. "I
+scanned it" and "I scanned all 65535 ports" are different statements.
 
-| Port | Service | Teaching point |
-|---|---|---|
-| 2222 | SSH moved off 22 | A "hidden" port is found in seconds |
-| 8443 | This web application | The scan leads into the gobuster exercise |
-| 3306 | MySQL banner | A database exposed to the network |
-| 6379 | Redis without auth | The classic forgotten service |
+Measured against the real thing, all five ports: `-sV` completes in about
+11 seconds. A default scan is near-instant. Budget for network latency to the
+droplet, not for the scan itself.
 
-Caveats, none fatal:
+## Design notes
 
-- **Everything is real and public.** Decoy services must be decoys — banners,
-  not actual databases. `nmap -sV` reads a banner perfectly well without a
-  real MySQL behind it.
-- **Scanning your own VM is legitimate**, but the traffic crosses the
-  provider's network, and twenty concurrent `-T4` scans look like exactly what
-  they are. Keep `-T3`, and prefer a targeted `-p-` on one host over sweeping
-  a range you do not own — the neighbouring addresses in that datacentre are
-  someone else's.
-- **Destroy it afterwards.** A deliberately vulnerable host with open decoy
-  ports should not outlive the workshop.
+Three things were tuned by measurement, and are worth keeping that way:
 
-## Recommendation
+- **The web application listens on 8088, not 8443.** nmap assumes TLS on
+  8443 and never fingerprints a plain-HTTP service there — it reports
+  `https-alt` with no version, and participants chase an `https://` URL that
+  cannot work. On 8088 the same server is reported as `nginx/1.14.0
+  (Ubuntu)`, which is exactly the handover stage 2 needs.
+- **The gateway on 9999 greets and hangs up.** An interactive service that
+  answers every probe but matches no fingerprint makes nmap work through its
+  entire probe set: measured at **154 seconds for that one port**, versus
+  about 1 second once it closes after its banner. Legacy banner daemons
+  behave this way anyway.
+- **The `Server:` header is set deliberately** (`nginx/1.14.0 (Ubuntu)`).
+  Version disclosure is what the scan reads, and one more finding for the
+  debrief: that version is from 2018 and tells an attacker which exploits to
+  try first.
 
-Build the module on the workshop host (option C), with the web application
-reachable only on its non-standard port. Option A (a container per
-participant VM) stays the better choice if the workshop ever has to run
-offline, and both use the same `docker-compose.yml`.
+## Running it on a public host
 
-Open question for the first session: run the nmap module **before** the web
-exercise (discovery leads into enumeration — the better story, but a hard
-dependency: if the host is unreachable, the whole chain stalls) or **after**
-it (independent blocks, each survivable on its own).
+- **Restrict real SSH (port 22) to your own address** in the provider's
+  firewall. Otherwise participants scan it, find it, and the tidy story about
+  port 2222 gets muddled by a genuine service you do not want anyone poking.
+- **Docker bypasses ufw.** Docker writes its own iptables rules, so a
+  `ufw deny` on a published port does not block it. Use the DigitalOcean
+  Cloud Firewall (or equivalent) for anything you actually want closed.
+- **Keep the decoys as decoys.** If you extend the module, add banners, not
+  services. The moment a real database runs on that host, the exercise has a
+  vulnerability nobody planned.
+- **Destroy the droplet afterwards.** A deliberately vulnerable host with
+  open decoy ports should not outlive the workshop.
+
+## Authorisation
+
+Scanning a host you rent is fine; the traffic still crosses the provider's
+network, and twenty simultaneous aggressive scans look exactly like what they
+are. Two rules for participants:
+
+1. **Scan the one address on the hand-out.** Not the range around it — the
+   neighbouring addresses in that datacentre belong to strangers, and a
+   sweep is not covered by "I was only looking".
+2. **Keep the default timing** (`-T3`). `-T4`/`-T5` from twenty VMs at once
+   is a small load test, and speed buys nothing here.
+
+This is also the moment to make the legal point concrete, before anyone has
+typed a command: in Switzerland, unauthorised access to a data processing
+system is an offence under Art. 143bis StGB, regardless of intent and
+regardless of whether anything was changed.
+
+## Why not Netlify (historical note)
+
+The first deployment was on Netlify, which serves only 80 and 443 — nothing
+to discover — and whose CDN edge belongs to Netlify, not to us, so pointing a
+class at it could not honestly be called authorised. Netlify also blocks the
+`gobuster` stage outright (see the README). Hosting on a machine the
+organiser controls solved all three problems at once.

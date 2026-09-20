@@ -1,34 +1,79 @@
-# Hacken erlaubt — Übung: Web-Enumeration & Passwort-Cracking
+# Hacken erlaubt — Übung: Scanning, Web-Enumeration & Passwort-Cracking
 
-**Ziel:** https://__ZIEL-URL-EINSETZEN__
+**Ziel:** `__ZIEL-IP-EINSETZEN__` (eine einzelne IP-Adresse)
 
 ## Spielregeln
 
-- Angriffe sind **ausschliesslich** gegen die oben genannte Adresse erlaubt.
-  Alles andere ist nicht Teil der Übung — und ausserhalb dieses Kurses
-  strafbar (Art. 143bis StGB, unbefugtes Eindringen in ein
-  Datenverarbeitungssystem).
-- Bitte mit `-t 5` scannen. Leise ist besser: Wer laut scannt, fliegt auf.
+- Angriffe sind **ausschliesslich** gegen die oben genannte IP-Adresse
+  erlaubt — nicht gegen den Adressbereich darum herum. Die Nachbaradressen im
+  Rechenzentrum gehören fremden Leuten. Alles andere ist nicht Teil der
+  Übung und ausserhalb dieses Kurses strafbar (Art. 143bis StGB, unbefugtes
+  Eindringen in ein Datenverarbeitungssystem).
+- Standard-Timing beibehalten (`-T3`), und mit `gobuster -t 5` arbeiten.
+  Leise ist besser: Wer laut scannt, fliegt auf.
 - Die Firma, alle Personen und alle Daten in dieser Umgebung sind erfunden.
 
 ## Die Ausgangslage
 
 Die *VeloRapid Zürich GmbH* ist ein Velokurierdienst in Zürich. Ihre Website
 wurde 2019 von einem Freelancer aufgesetzt und seither nicht mehr angefasst.
-Sie haben nichts als die Adresse.
+Sie haben nichts als eine IP-Adresse — nicht einmal eine URL.
 
 Ihre Aufgabe: Finden Sie heraus, wie weit Sie kommen — und sammeln Sie
-unterwegs drei Flags im Format `HACKEN-ERLAUBT{...}`.
+unterwegs vier Flags im Format `HACKEN-ERLAUBT{...}`.
 
 ---
 
-## Aufgabe 1 — Umschauen
+## Aufgabe 1 — Offene Türen finden (nmap)
 
-Verschaffen Sie sich einen Überblick. Was verrät die Website über sich selbst,
-ohne dass man etwas «hacken» muss?
+Ein Server kann auf 65535 Ports Dienste anbieten. `nmap` probiert aus, welche
+davon antworten — und mit `-sV` auch, *was* dort antwortet.
 
 ```bash
-curl -s https://__ZIEL-URL__/robots.txt
+# Welche Ports sind offen? (Standard: die 1000 haeufigsten)
+nmap -Pn __ZIEL-IP__
+
+# Was laeuft dort genau?
+nmap -sV -Pn -p <gefundene,ports> __ZIEL-IP__
+```
+
+Notieren Sie sich, was Sie finden:
+
+| Port | Dienst | Version |
+|---|---|---|
+| | | |
+| | | |
+| | | |
+| | | |
+
+Ein Dienst begrüsst jeden, der sich verbindet, mit einem **Banner**. Das
+können Sie auch von Hand abholen — hier steckt Flag 1 drin:
+
+```bash
+nc __ZIEL-IP__ 9999
+```
+
+**Flag 1:** `HACKEN-ERLAUBT{________________}`
+
+Der Standard-Scan prüft nur die 1000 häufigsten Ports. Prüfen Sie alle:
+
+```bash
+nmap -Pn -p- __ZIEL-IP__
+```
+
+> **Frage:** Ein Dienst taucht erst jetzt auf. Welcher — und was heisst das
+> für die Aussage «ich habe den Server gescannt»?
+
+---
+
+## Aufgabe 2a — Umschauen
+
+Einer der gefundenen Dienste ist eine Website. Rufen Sie sie im Browser auf
+(Achtung: `http://`, mit Portnummer). Was verrät sie über sich selbst, ohne
+dass man etwas «hacken» muss?
+
+```bash
+curl -s http://__ZIEL-IP__:8088/robots.txt
 ```
 
 > **Frage:** `robots.txt` sagt Suchmaschinen, was sie *nicht* indexieren
@@ -36,13 +81,13 @@ curl -s https://__ZIEL-URL__/robots.txt
 
 ---
 
-## Aufgabe 2 — Verzeichnisse und Dateien finden (gobuster)
+## Aufgabe 2b — Verzeichnisse und Dateien finden (gobuster)
 
 Nicht alles, was auf einem Webserver liegt, ist verlinkt. `gobuster` probiert
 Pfade aus einer Wortliste durch und zeigt, was tatsächlich existiert.
 
 ```bash
-gobuster dir -u https://__ZIEL-URL__ \
+gobuster dir -u http://__ZIEL-IP__:8088 \
              -w workshop-wordlist.txt \
              -t 5 \
              -o gobuster-ergebnis.txt
@@ -72,10 +117,10 @@ erstaunlich oft dort.
 <summary>Hinweis 2</summary>
 
 Sehen Sie sich den Fund mit `curl` an, nicht nur im Browser:
-`curl -s https://__ZIEL-URL__/<fund>`
+`curl -s http://__ZIEL-IP__:8088/<fund>`
 </details>
 
-**Flag 1:** `HACKEN-ERLAUBT{________________}`
+**Flag 2:** `HACKEN-ERLAUBT{________________}`
 
 ---
 
@@ -93,7 +138,7 @@ Hinweistext unter dem Formular.
 
 Sehen Sie sich im Portal um: Aufträge, Kunden — und den Reiter **Datenbank**.
 
-**Flag 2:** `HACKEN-ERLAUBT{________________}`
+**Flag 3:** `HACKEN-ERLAUBT{________________}`
 
 > **Frage:** Wie viele Personendaten könnten Sie an dieser Stelle bereits
 > abziehen? Was wäre das für die Firma — und für deren Kundschaft?
@@ -135,13 +180,13 @@ warum.
 Eines der geknackten Konten hat mehr Rechte als das Konto, mit dem Sie
 angemeldet sind. Melden Sie sich ab und mit diesem Konto neu an.
 
-**Flag 3:** `HACKEN-ERLAUBT{________________}`
+**Flag 4:** `HACKEN-ERLAUBT{________________}`
 
 ---
 
 ## Zum Schluss: die Gegenseite
 
-Notieren Sie sich während der Übung, an welchen fünf Stellen VeloRapid den
+Notieren Sie sich während der Übung, an welchen sechs Stellen VeloRapid den
 Angriff hätte stoppen können. Wir vergleichen die Listen in der
 Schlussbesprechung.
 
@@ -150,6 +195,7 @@ Schlussbesprechung.
 3. ________________________________________________
 4. ________________________________________________
 5. ________________________________________________
+6. ________________________________________________
 
 > **Die entscheidende Frage:** Welche *eine* dieser Massnahmen hätte den
 > Angriff am frühesten beendet?

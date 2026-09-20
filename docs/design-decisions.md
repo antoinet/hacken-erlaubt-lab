@@ -3,18 +3,19 @@
 Why the training application looks the way it does, including the options that
 were rejected. Newest decisions at the bottom.
 
-## 1. One narrative, three stages — not three separate puzzles
+## 1. One narrative, four stages — not three separate puzzles
 
 The workshop teaches three techniques. Presenting them as three unrelated
 exercises makes each one feel like a party trick. Here, each stage produces
-the input for the next: enumeration yields credentials, credentials yield
-hashes, a cracked hash yields admin. Participants experience the thing that
+the input for the next: the scan yields the web port, enumeration yields
+credentials, credentials yield hashes, a cracked hash yields admin. Participants experience the thing that
 actually makes attacks dangerous — chaining — rather than three isolated
 tools.
 
-The cost: a participant stuck at stage 1 is stuck everywhere. Mitigated with
-staged hints in the hand-out, a `robots.txt` breadcrumb, and a `/.env` file
-that spells out which account the portal uses.
+The cost: a participant stuck early is stuck everywhere. Mitigated with
+staged hints in the hand-out, a banner on port 9999 that names the web port,
+a `robots.txt` breadcrumb, and a `/.env` file that spells out which account
+the portal uses.
 
 ## 2. A small Swiss company, not a CTF box
 
@@ -67,13 +68,14 @@ that password from `/.env`, so the un-crackable hash costs them nothing — and
 it is the concrete demonstration that the wordlist, not the algorithm, decided
 the outcome.
 
-## 6. Only three vulnerabilities, everything else solid
+## 6. Only the intended vulnerabilities, everything else solid
 
 Session tokens are HMAC-signed, the database view is read-only with no
-free-form SQL input, and the self-hosted server blocks path traversal. A
-deliberately forgeable token or an accidental SQL-injection would let
-participants skip the chain, and a traversal bug in a container handed to 20
-people is a real vulnerability rather than a taught one.
+free-form SQL input, the self-hosted server blocks path traversal, and the
+decoy services have nothing behind them (decision 8). A deliberately
+forgeable token or an accidental SQL-injection would let participants skip
+the chain, and a traversal bug in a container handed to 20 people is a real
+vulnerability rather than a taught one.
 
 The consequence: this app is *not* a general-purpose vulnerable playground
 (that is what DVWA and Juice Shop are for). It teaches exactly three
@@ -96,13 +98,38 @@ that had deferred the nmap module — no custom ports, and a CDN edge that is
 not ours to scan. A self-hosted target is ours, and can listen wherever we
 like.
 
+## 8. Decoys are banners, and the numbers decided the details
+
+The scanning stage needs services to find, but a public training host must
+not run real ones: a genuine Redis or MySQL there would be an actual
+vulnerability rather than a taught one. `nmap -sV` identifies a service from
+what it says on connect, so a greeting is enough.
+
+Three details were settled by measuring rather than guessing, and each would
+silently degrade the exercise if changed back:
+
+- **The web application listens on 8088, not 8443.** nmap assumes TLS on
+  8443, reports `https-alt` with no version, and sends participants chasing
+  an `https://` URL that cannot work. On 8088 it reports
+  `nginx/1.14.0 (Ubuntu)` — the handover stage 2 needs.
+- **The gateway on 9999 greets and hangs up.** While it answered every probe
+  without matching a fingerprint, `nmap -sV` of that single port took **154
+  seconds**; closing after the banner brought the whole five-port scan to
+  ~11s. Legacy banner daemons behave that way anyway.
+- **Redis sits on 6379 deliberately, which is outside nmap's top-1000.** The
+  default scan misses it and `-p-` finds it. That gap is the lesson: "I
+  scanned the server" and "I scanned all 65535 ports" are different claims.
+
+**Rejected:** putting the web application on 80 as well, as a safety net for
+participants who cannot find it. It would remove the reason to scan at all.
+The fallback is gentler instead — the banner on 9999 names the web port, so a
+single `nc` unsticks anyone who is lost.
+
 ## Open items
 
-- **nmap module.** Deferred, with a recommendation and an open question about
-  ordering — see [`port-scanning.md`](port-scanning.md).
 - **Flag collection.** Flags are currently written down by hand. A scoreboard
   would show the facilitator who is stuck, at the price of a stateful backend
   that Netlify Functions alone cannot provide.
-- **Second cracking tier.** If a group finishes early, a rule-based or mask
+- **A sixth account for a second cracking tier.** If a group finishes early, a rule-based or mask
   exercise is the natural extension (see decision 5); it would need a sixth
   account with a password outside `rockyou.txt` but within `best64` reach.

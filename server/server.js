@@ -54,7 +54,13 @@ function resolveStatic(urlPath) {
 }
 
 function send(res, status, headers, body) {
-  res.writeHead(status, { 'x-robots-tag': 'noindex, nofollow', ...headers });
+  res.writeHead(status, {
+    // Version disclosure, on purpose: it is what the scan stage reads off the
+    // banner, and one of the findings the debrief comes back to.
+    server: 'nginx/1.14.0 (Ubuntu)',
+    'x-robots-tag': 'noindex, nofollow',
+    ...headers,
+  });
   res.end(body);
 }
 
